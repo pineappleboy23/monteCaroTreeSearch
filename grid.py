@@ -29,6 +29,9 @@ class Grid():
                 if 0 <= x + r < 8 and 0 <= y + c < 8:  # Ensure we don't go out of bounds
                     self.data[x + r, y + c] += piece[r, c]
 
+        # add up score and remove filled rows and cols
+        self.clear_lines()
+
     def generate_3_pieces(self):
         p = []
         if len(self.pieces) == 0:
@@ -63,8 +66,33 @@ class Grid():
             if before_len == len(self.pieces):
                 return (True, self.score)
 
-        #remove solid rows and columns here, do both at once
-        pass
+
+        return (False, self.score)
+
+    # remove solid rows and columns here, do both at once
+    def clear_lines(self):
+        squares_to_reset = []
+
+        for row in range(8):
+            # if row is full
+            if np.min(self.data[row]) == 1:
+                # clear row and add to score
+                squares_to_reset.extend([(row, y) for y in range(8)])
+                self.score += 1
+
+        # now clear columns
+        # check for full columns
+        for col in range(8):
+            if np.min(self.data[:, col]) == 1:  # Column is full
+                squares_to_reset.extend([(x, col) for x in range(8)])
+                self.score += 1
+
+        # clear the identified squares
+        for x, y in squares_to_reset:
+            self.data[x, y] = 0  # reset squares to empty
+
+
+
 
 
 
