@@ -1,6 +1,7 @@
 import numpy as np
 import random
 
+
 # Manages a grid of values
 class Grid():
     def __init__(self, width=8, height=8, default=0, data=None, pieces=[]):
@@ -13,43 +14,56 @@ class Grid():
         self.pieces = pieces
         self.score = 0
 
+        self.game_ended = False
+
     def piece_fits(self, piece, x, y):
         piece_board = np.zeros((8, 8))
-        for r in range(3):
-            for c in range(3):
-                if 0 <= x + r < 8 and 0 <= y + c < 8:  # Ensure we don't go out of bounds
-                    piece_board[x + r, y + c] = piece[r, c]
-
+        for r in range(len(piece)):
+            for c in range(len(piece[0])):
+                # this allows us to add stuff that goes out of bounds as long as it's zero
+                # and not aprt of the piece
+                if piece[r, c] != 0:
+                    if 0 <= x + r < 8 and 0 <= y + c < 8:  # Ensure we don't go out of bounds
+                        piece_board[x + r, y + c] = piece[r, c]
 
         return np.max(piece_board + self.data) < 2
 
     def add_piece(self, piece, x, y):
-        for r in range(3):
-            for c in range(3):
+        for r in range(len(piece)):
+            for c in range(len(piece[0])):
                 if 0 <= x + r < 8 and 0 <= y + c < 8:  # Ensure we don't go out of bounds
                     self.data[x + r, y + c] += piece[r, c]
 
         # add up score and remove filled rows and cols
         self.clear_lines()
 
+    def give_board_pieces(self):
+        if len(self.pieces) == 0:
+            self.pieces = self.generate_3_pieces()
+            return True
+        return False
+
     def generate_3_pieces(self):
         p = []
-        if len(self.pieces) == 0:
-            for i in range(3):
-                p.append(Piece(random.choice(pieces)).arr)
+        for i in range(3):
+            p.append(random.choice(pieces).arr)
         return p
 
     def possible_moves(self, piece):
         moves = []
-        for x in range(6):
-            for y in range(6):
+
+        # go up to 8 search because some pieces are 1 or 2 wide
+        # piece fits will cover problems
+        for x in range(8):
+            for y in range(8):
                 if self.piece_fits(piece, x, y):
                     moves.append((x, y))
         return moves
 
     # returns (game_ended, score)
     def random_move(self):
-        self.score += 1
+        if self.game_ended:
+            return
         if len(self.pieces) == 0:
             self.pieces = self.generate_3_pieces()
             return (False, self.score)
@@ -64,8 +78,8 @@ class Grid():
                     break
 
             if before_len == len(self.pieces):
+                self.game_ended = True
                 return (True, self.score)
-
 
         return (False, self.score)
 
@@ -92,58 +106,53 @@ class Grid():
             self.data[x, y] = 0  # reset squares to empty
 
 
-
-
-
-
 # Extension of the Grid class that can render to text and rotate
 class DisplayableGrid(Grid):
     def __str__(self):
         return self.render()
-    
+
     def render(self):
         res = []
-        
+
         horiSplit = ' | '
         vertSplit = '\n +' + '---+' * self.width + '\n'
-        
+
         for row in self.data:
             res.append(horiSplit + horiSplit.join(row) + horiSplit)
-        
+
         return vertSplit + vertSplit.join(res) + vertSplit
+
 
 class Piece():
 
     def __init__(self, shape):
-        self.shape = shape
+        self.piece_shape = shape
         self.arr = self.to_array()
-
 
     def __str__(self):
         return self.render()
 
     def to_array(self):
         # Get the shape dimensions
-        rows = len(self.shape)
-        cols = max(len(row) for row in self.shape)
+        rows = len(self.piece_shape)
+        cols = max(len(row) for row in self.piece_shape)
 
         # Initialize a 3x3 array with zeros
-        array = np.zeros((3, 3), dtype=int)
+        array = np.zeros((rows, cols), dtype=int)
 
         # Fill in the "x" values with 1s
-        for r, row in enumerate(self.shape):
+        for r, row in enumerate(self.piece_shape):
             for c, char in enumerate(row):
-                if r < 3 and c < 3:
+                if r < rows and c < cols:
                     array[r, c] = 1 if char == "x" else 0
 
         return array
 
-
     def render(self):
         res = []
 
-        for row in self.shape:
-            res.append("".join(row)+"\n")
+        for row in self.piece_shape:
+            res.append("".join(row) + "\n")
 
         return "".join(res)
 
@@ -152,7 +161,7 @@ pieces = [Piece([["x"]]),
           Piece([["x", "x"]]),
           Piece([["x", "x", "x"]]),
           Piece([["x", "x", "x", "x"]]),
-          Piece([["x"],["x"]]),
+          Piece([["x"], ["x"]]),
           Piece([["x"], ["x"], ["x"]]),
           Piece([["x"], ["x"], ["x"], ["x"]]),
           Piece([["x", "x"], ["x", "x"]]),
@@ -164,18 +173,26 @@ pieces = [Piece([["x"]]),
           Piece([["x", "x", "x"], [" ", " ", "x"], [" ", " ", "x"]]),
           Piece([[" ", " ", "x"], [" ", " ", "x"], ["x", "x", "x"]]),
           Piece([["x"], ["x"], ["x", "x", "x"]])
-         ]
+          ]
 
 
 class Node():
-    def __init__(self, parent, total_score, visits, is_player, block=None, blocks=None, seed=None):
+    def __init__(self, parent, total_score, visits, is_player, block=None, blocks=[], seed=None, position=None):
         self.parent = parent
         self.total_score = total_score
         self.visits = visits
         self.is_player = is_player
+
+        #if player, the block to place
         self.block = block
+
+        # if not player, the 3 random blocks
+        # otherwise the blocks left to pick
         self.blocks = blocks
         self.seed = seed
+
+        #if player, where to place block
+        self.position = position
 
         self.expanded = False
         self.children = []
@@ -183,13 +200,10 @@ class Node():
 
         self.CONSTANT = 1.4
 
-        self.simulations = 0
-
-
     def update_UTC(self):
         if self.visits == 0:
             self.UTC = np.inf
             return
         else:
-            self.UTC = self.total_score/self.visits + self.CONSTANT * np.sqrt(np.log(self.parent.simulations)/self.visits)
-
+            self.UTC = self.total_score / self.visits + self.CONSTANT * np.sqrt(
+                np.log(self.parent.visits) / self.visits)

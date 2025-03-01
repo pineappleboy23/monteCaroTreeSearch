@@ -1,29 +1,95 @@
 import grid
 import copy
 import numpy as np
+import random
+
+
+
+def expand(node, game):
+    amount_of_3_random_pieces = 50
+    if len(node.blocks) == 0:
+        for i in range(amount_of_3_random_pieces):
+            pieces = game.generate_3_pieces()
+
+            # __init__(self, parent, total_score, visits, is_player, block=None, blocks=None, seed=None, position=None)
+            node.children.append(grid.Node(node, 0, 0, False, block=None, blocks=pieces))
+    else:
+        for i in range(len(node.blocks)):
+            for position in game.possible_moves(node.blocks[i]):
+                # __init__(self, parent, total_score, visits, is_player, block=None, blocks=None, seed=None, position=None)
+                new_pieces = node.blocks.copy()
+                new_pieces.pop(i)
+                node.children.append(grid.Node(node, 0, 0, True, block=node.blocks[i], blocks=new_pieces))
+
+def update(node, board):
+    if node.is_player:
+        board.add_piece( node.piece, node.position[0], node.position[1])
+    board.pieces = node.blocks
+
+
+def rollout_and_backprop(node, game):
+    # play out random game
+    while not game.random_move()[0]:
+        pass
+
+    score = game.score
+
+    # backprop to update scores and visits
+    cur_node = node
+    while cur_node.parent is not None:
+
+        cur_node.total_score += score
+        cur_node.visits += 1
+
+        cur_node.update_UTC()
+
+        cur_node = cur_node.parent
+
+    # update root visits
+    cur_node.visits += 1
 
 
 def MCTS(root, board, n_sims):
     expand_threshold = 1
-    for _ in range(n_sims):
-        b = grid.Grid(data=copy.deepcopy(board.grid), pieces=copy.deepcopy(board.pieces))
+    for sim_count in range(n_sims):
+        if sim_count % 100 == 0:
+            print(sim_count)
+        b = grid.Grid(data=copy.deepcopy(board.data), pieces=copy.deepcopy(board.pieces))
         cur_node = root
         while cur_node.visits >= expand_threshold:
             if cur_node.expanded:
                 if cur_node.is_player:
                     # pick best scored move node
-                    pass
+                    index = np.argmax([c.UTC for c in cur_node.children])
+                    cur_node = cur_node.children[index]
                 else:
-                    #pick child (set of three blocks)
-                    pass
+                    cur_node = random.choice(cur_node.children)
+                update(cur_node, b)
             elif np.max(b.data) >= 2:
                 break
             else:
-                cur_node.expand(b)
-        rollout
-        backprop
+                expand(cur_node, b)
+
+        rollout_and_backprop(cur_node, b)
+
+    best_node_index = np.argmax([c.UTC for c in root.children])
+    best_node = root.children[best_node_index]
+
+    return best_node.piece, best_node.position
+
+
+game = grid.Grid()
+
+game.give_board_pieces()
 
 
 
-# __init__(parent, total_score, visits, is_player, block, blocks, seed)
-root = grid.Node(parent=None, total_score=0, visits=0, is_player=True, )
+# __init__(self, parent, total_score, visits, is_player, block=None, blocks=None, seed=None, position=None)
+root = grid.Node(parent=None, total_score=0, visits=0, is_player=False, blocks=game.pieces)
+
+result = MCTS(root, game, 10_000)
+
+for i in range(8):
+    print(game.data[i])
+print(result)
+
