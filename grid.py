@@ -1,11 +1,17 @@
 import numpy as np
+import random
 
 # Manages a grid of values
 class Grid():
-    def __init__(self, width=8, height=8, default=0):
+    def __init__(self, width=8, height=8, default=0, data=None, pieces=[]):
         self.width = width
         self.height = height
-        self.data = np.array([[default for y in range(height)] for x in range(width)])
+        if data is None:
+            self.data = np.array([[default for y in range(height)] for x in range(width)])
+        else:
+            self.data = data
+        self.pieces = pieces
+        self.score = 0
 
     def piece_fits(self, piece, x, y):
         piece_board = np.zeros((8, 8))
@@ -21,7 +27,45 @@ class Grid():
         for r in range(3):
             for c in range(3):
                 if 0 <= x + r < 8 and 0 <= y + c < 8:  # Ensure we don't go out of bounds
-                    self.data[x + r, y + c] = piece[r, c]
+                    self.data[x + r, y + c] += piece[r, c]
+
+    def generate_3_pieces(self):
+        p = []
+        if len(self.pieces) == 0:
+            for i in range(3):
+                p.append(Piece(random.choice(pieces)).arr)
+        return p
+
+    def possible_moves(self, piece):
+        moves = []
+        for x in range(6):
+            for y in range(6):
+                if self.piece_fits(piece, x, y):
+                    moves.append((x, y))
+        return moves
+
+    # returns (game_ended, score)
+    def random_move(self):
+        self.score += 1
+        if len(self.pieces) == 0:
+            self.pieces = self.generate_3_pieces()
+            return (False, self.score)
+        else:
+            before_len = len(self.pieces)
+            for i in range(len(self.pieces)):
+                moves = self.possible_moves(self.pieces[i])
+                if len(moves) > 0:
+                    move = random.choice(moves)
+                    piece_to_play = self.pieces.pop(i)
+                    self.add_piece(piece_to_play, move[0], move[1])
+                    break
+
+            if before_len == len(self.pieces):
+                return (True, self.score)
+
+        #remove solid rows and columns here, do both at once
+        pass
+
 
 
 # Extension of the Grid class that can render to text and rotate
@@ -44,6 +88,7 @@ class Piece():
 
     def __init__(self, shape):
         self.shape = shape
+        self.arr = self.to_array()
 
 
     def __str__(self):
@@ -92,3 +137,31 @@ pieces = [Piece([["x"]]),
           Piece([[" ", " ", "x"], [" ", " ", "x"], ["x", "x", "x"]]),
           Piece([["x"], ["x"], ["x", "x", "x"]])
          ]
+
+
+class Node():
+    def __init__(self, parent, total_score, visits, is_player, block=None, blocks=None, seed=None):
+        self.parent = parent
+        self.total_score = total_score
+        self.visits = visits
+        self.is_player = is_player
+        self.block = block
+        self.blocks = blocks
+        self.seed = seed
+
+        self.expanded = False
+        self.children = []
+        self.UTC = np.inf
+
+        self.CONSTANT = 1.4
+
+        self.simulations = 0
+
+
+    def update_UTC(self):
+        if self.visits == 0:
+            self.UTC = np.inf
+            return
+        else:
+            self.UTC = self.total_score/self.visits + self.CONSTANT * np.sqrt(np.log(self.parent.simulations)/self.visits)
+
