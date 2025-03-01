@@ -1,69 +1,31 @@
+import numpy as np
+
 # Manages a grid of values
 class Grid():
-    def __init__(self, width, height, default=''):
+    def __init__(self, width=8, height=8, default=0):
         self.width = width
         self.height = height
-        self.data = [[default for y in range(height)] for x in range(width)]
-    
-    def set(self, x, y, value):
-        self.data[y][x] = value
-    
-    def get(self, x, y):
-        return self.data[y][x]
+        self.data = np.array([[default for y in range(height)] for x in range(width)])
 
-# Extension of the Grid class that can be rotated
-class RotatableGrid(Grid):
-    def rotateCoords(self, x, y, rotation=0):
-        # Get rotation
-        r = rotation % 4
-        
-        # Get the offset values
-        w = self.width // 2
-        h = self.height // 2
-        ox = x - w
-        oy = y - h
-        
-        # Set up the default response
-        res = {
-            'x': x,
-            'y': y,
-        }
-        
-        # Create the new x and y depending on the rotation
-        if r == 1:
-            res = {
-                'x': -oy,
-                'y': ox,
-            }
-        elif r == 2:
-            res = {
-                'x': -ox,
-                'y': -oy,
-            }
-        elif r == 3:
-            res = {
-                'x': oy,
-                'y': -ox,
-            }
-        
-        # Correct the offset if not different
-        if res['x'] != x and res['y'] != y:
-            res['x'] += w
-            res['y'] += h
-        
-        # Return the rotated coordinates
-        return res
-    
-    def set(self, x, y, value, rotation=0):
-        coords = self.rotateCoords(x, y, rotation)
-        Grid.set(self, coords['x'], coords['y'], value)
-    
-    def get(self, x, y, rotation=0):
-        coords = self.rotateCoords(x, y, rotation)
-        return Grid.get(self, coords['x'], coords['y'])
+    def piece_fits(self, piece, x, y):
+        piece_board = np.zeros((8, 8))
+        for r in range(3):
+            for c in range(3):
+                if 0 <= x + r < 8 and 0 <= y + c < 8:  # Ensure we don't go out of bounds
+                    piece_board[x + r, y + c] = piece[r, c]
 
-# Extension of the RotatableGrid class that can render to text and rotate
-class DisplayableGrid(RotatableGrid):
+
+        return np.max(piece_board + self.data) < 2
+
+    def add_piece(self, piece, x, y):
+        for r in range(3):
+            for c in range(3):
+                if 0 <= x + r < 8 and 0 <= y + c < 8:  # Ensure we don't go out of bounds
+                    self.data[x + r, y + c] = piece[r, c]
+
+
+# Extension of the Grid class that can render to text and rotate
+class DisplayableGrid(Grid):
     def __str__(self):
         return self.render()
     
@@ -77,3 +39,56 @@ class DisplayableGrid(RotatableGrid):
             res.append(horiSplit + horiSplit.join(row) + horiSplit)
         
         return vertSplit + vertSplit.join(res) + vertSplit
+
+class Piece():
+
+    def __init__(self, shape):
+        self.shape = shape
+
+
+    def __str__(self):
+        return self.render()
+
+    def to_array(self):
+        # Get the shape dimensions
+        rows = len(self.shape)
+        cols = max(len(row) for row in self.shape)
+
+        # Initialize a 3x3 array with zeros
+        array = np.zeros((3, 3), dtype=int)
+
+        # Fill in the "x" values with 1s
+        for r, row in enumerate(self.shape):
+            for c, char in enumerate(row):
+                if r < 3 and c < 3:
+                    array[r, c] = 1 if char == "x" else 0
+
+        return array
+
+
+    def render(self):
+        res = []
+
+        for row in self.shape:
+            res.append("".join(row)+"\n")
+
+        return "".join(res)
+
+
+pieces = [Piece([["x"]]),
+          Piece([["x", "x"]]),
+          Piece([["x", "x", "x"]]),
+          Piece([["x", "x", "x", "x"]]),
+          Piece([["x"],["x"]]),
+          Piece([["x"], ["x"], ["x"]]),
+          Piece([["x"], ["x"], ["x"], ["x"]]),
+          Piece([["x", "x"], ["x", "x"]]),
+          Piece([["x", "x"], ["x"]]),
+          Piece([["x"], ["x", "x"]]),
+          Piece([[" ", "x"], ["x", "x"]]),
+          Piece([["x", "x"], [" ", "x"]]),
+          Piece([["x", "x", "x"], ["x"], ["x"]]),
+          Piece([["x", "x", "x"], [" ", " ", "x"], [" ", " ", "x"]]),
+          Piece([[" ", " ", "x"], [" ", " ", "x"], ["x", "x", "x"]]),
+          Piece([["x"], ["x"], ["x", "x", "x"]])
+         ]
