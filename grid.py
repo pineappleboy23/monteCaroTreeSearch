@@ -25,7 +25,7 @@ class Grid():
                 # and not aprt of the piece
 
                 if 0 <= x + r < 8 and 0 <= y + c < 8:  # Ensure we don't go out of bounds
-                    piece_board[x + r, y + c] = piece[r, c]
+                    piece_board[x + r][ y + c] = piece[r][ c]
                 else:
                     return False
 
@@ -35,7 +35,7 @@ class Grid():
         for r in range(len(piece)):
             for c in range(len(piece[0])):
                 if 0 <= x + r < 8 and 0 <= y + c < 8:  # Ensure we don't go out of bounds
-                    self.data[x + r, y + c] += piece[r, c]
+                    self.data[x + r][ y + c] += piece[r][ c]
 
         # add up score and remove filled rows and cols
         self.clear_lines()
@@ -63,10 +63,19 @@ class Grid():
                     moves.append((x, y))
         return moves
 
+    def no_moves_left(self):
+        still_moves = False
+        for i in range(len(self.pieces)):
+            moves = self.possible_moves(self.pieces[i])
+            if len(moves) > 0:
+                still_moves = True
+
+        return not still_moves and (len(self.pieces) != 0)
+
     # returns (game_ended, score)
     def random_move(self):
         if self.game_ended:
-            return
+            return (True, self.score)
         if len(self.pieces) == 0:
             self.pieces = self.generate_3_pieces()
             return (False, self.score)
@@ -106,7 +115,7 @@ class Grid():
 
         # clear the identified squares
         for x, y in squares_to_reset:
-            self.data[x, y] = 0  # reset squares to empty
+            self.data[x][ y] = 0  # reset squares to empty
 
 
 # Extension of the Grid class that can render to text and rotate
@@ -147,7 +156,7 @@ class Piece():
         for r, row in enumerate(self.piece_shape):
             for c, char in enumerate(row):
                 if r < rows and c < cols:
-                    array[r, c] = 1 if char == "x" else 0
+                    array[r][ c] = 1 if char == "x" else 0
 
         return array
 
