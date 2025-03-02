@@ -17,14 +17,17 @@ def expand(node, game):
         for i in range(len(node.blocks)):
             for position in game.possible_moves(node.blocks[i]):
                 # __init__(self, parent, total_score, visits, is_player, block=None, blocks=None, seed=None, position=None)
-                new_pieces = node.blocks.copy()
+                new_pieces = [pp.copy() for pp in node.blocks]
                 new_pieces.pop(i)
-                node.children.append(grid.Node(node, 0, 0, True, block=node.blocks[i], blocks=new_pieces))
+                node.children.append(grid.Node(node, 0, 0, True, block=node.blocks[i].copy(), blocks=new_pieces, position=position))
+    if len(node.children) == 0:
+        print(123456)
+    node.expanded = True
 
 def update(node, board):
     if node.is_player:
-        board.add_piece( node.piece, node.position[0], node.position[1])
-    board.pieces = node.blocks
+        board.add_piece( node.block.copy(), node.position[0], node.position[1])
+    board.pieces = copy.deepcopy(node.blocks)
 
 
 def rollout_and_backprop(node, game):
@@ -52,13 +55,16 @@ def rollout_and_backprop(node, game):
 def MCTS(root, board, n_sims):
     expand_threshold = 1
     for sim_count in range(n_sims):
-        if sim_count % 100 == 0:
+        if sim_count % 100 == 0 and False:
             print(sim_count)
-        b = grid.Grid(data=copy.deepcopy(board.data), pieces=copy.deepcopy(board.pieces))
+        b = grid.Grid(data=copy.deepcopy(board.data), pieces=copy.deepcopy(root.blocks))
         cur_node = root
         while cur_node.visits >= expand_threshold:
             if cur_node.expanded:
-                if cur_node.is_player:
+                if len(cur_node.children) == 0:
+                    break
+                # if kid is player, sample using UTC
+                if cur_node.children[0].is_player:
                     # pick best scored move node
                     index = np.argmax([c.UTC for c in cur_node.children])
                     cur_node = cur_node.children[index]
@@ -75,21 +81,42 @@ def MCTS(root, board, n_sims):
     best_node_index = np.argmax([c.UTC for c in root.children])
     best_node = root.children[best_node_index]
 
-    return best_node.piece, best_node.position
+    return best_node
 
+
+random.seed(1)
+
+start_grid =[]
 
 game = grid.Grid()
 
 game.give_board_pieces()
 
 
-
 # __init__(self, parent, total_score, visits, is_player, block=None, blocks=None, seed=None, position=None)
 root = grid.Node(parent=None, total_score=0, visits=0, is_player=False, blocks=game.pieces)
 
-result = MCTS(root, game, 10_000)
+while np.max(game.data) < 2:
+    root = MCTS(root, game, 200)
+    # clean up parent tree data?
+    if root.is_player:
+        game.add_piece(root.block.copy(), root.position[0], root.position[1])
+
+    print("--------------------")
+    print(root.position)
+    for i in range(8):
+        print(game.data[i])
+    print(game.score)
+    print("--------")
+    for i in root.blocks:
+        print(i)
+    print("--------------------")
+
+    # cleanup of old tree nodes to free memory
+    root.parent.children = []
+    root.parent = None
+
 
 for i in range(8):
     print(game.data[i])
-print(result)
-
+print(game.score)

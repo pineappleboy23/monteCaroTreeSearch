@@ -18,13 +18,16 @@ class Grid():
 
     def piece_fits(self, piece, x, y):
         piece_board = np.zeros((8, 8))
+
         for r in range(len(piece)):
             for c in range(len(piece[0])):
                 # this allows us to add stuff that goes out of bounds as long as it's zero
                 # and not aprt of the piece
-                if piece[r, c] != 0:
-                    if 0 <= x + r < 8 and 0 <= y + c < 8:  # Ensure we don't go out of bounds
-                        piece_board[x + r, y + c] = piece[r, c]
+
+                if 0 <= x + r < 8 and 0 <= y + c < 8:  # Ensure we don't go out of bounds
+                    piece_board[x + r, y + c] = piece[r, c]
+                else:
+                    return False
 
         return np.max(piece_board + self.data) < 2
 
@@ -54,8 +57,8 @@ class Grid():
 
         # go up to 8 search because some pieces are 1 or 2 wide
         # piece fits will cover problems
-        for x in range(8):
-            for y in range(8):
+        for x in range(9 - len(piece)):
+            for y in range(9 - len(piece[0])):
                 if self.piece_fits(piece, x, y):
                     moves.append((x, y))
         return moves
@@ -157,23 +160,85 @@ class Piece():
         return "".join(res)
 
 
-pieces = [Piece([["x"]]),
-          Piece([["x", "x"]]),
-          Piece([["x", "x", "x"]]),
-          Piece([["x", "x", "x", "x"]]),
-          Piece([["x"], ["x"]]),
-          Piece([["x"], ["x"], ["x"]]),
-          Piece([["x"], ["x"], ["x"], ["x"]]),
-          Piece([["x", "x"], ["x", "x"]]),
-          Piece([["x", "x"], ["x"]]),
-          Piece([["x"], ["x", "x"]]),
-          Piece([[" ", "x"], ["x", "x"]]),
-          Piece([["x", "x"], [" ", "x"]]),
-          Piece([["x", "x", "x"], ["x"], ["x"]]),
-          Piece([["x", "x", "x"], [" ", " ", "x"], [" ", " ", "x"]]),
-          Piece([[" ", " ", "x"], [" ", " ", "x"], ["x", "x", "x"]]),
-          Piece([["x"], ["x"], ["x", "x", "x"]])
-          ]
+pieces = [
+
+    Piece([["x", "x"]]),
+
+    Piece([["x", "x", "x"]]),
+
+    Piece([["x", "x", "x", "x"]]),
+
+    Piece([["x", "x", "x", "x", "x"]]),
+
+    Piece([["x"], ["x"]]),
+
+    Piece([["x"], ["x"], ["x"]]),
+
+    Piece([["x"], ["x"], ["x"], ["x"], ["x"]]),
+
+    # L pieces
+    Piece([["x"], ["x", "x", "x", "x"]]),
+
+    Piece([[" ", " ", " ", "x"], ["x", "x", "x", "x"]]),
+
+    Piece([["x", "x", "x", "x"], ["x"]]),
+
+    Piece([["x", "x", "x", "x"], [" ", " ", " ", "x"]]),
+
+    Piece([["x", " "], ["x", " "], ["x", " "], ["x", "x"]]),
+
+    Piece([["x", "x"], ["x", " "], ["x", " "], ["x", " "]]),
+
+    Piece([[" ", "x"], [" ", "x"], [" ", "x"], ["x", "x"]]),
+
+    Piece([["x", "x"], [" ", "x"], [" ", "x"], [" ", "x"]]),
+
+    # squares
+    Piece([["x", "x"], ["x", "x"]]),
+
+    Piece([["x", "x", "x"], ["x", "x", "x"], ["x", "x", "x"]]),
+
+    # rectangles
+    Piece([["x", "x"], ["x", "x"], ["x", "x"]]),
+
+    Piece([["x", "x", "x"], ["x", "x", "x"]]),
+
+    # angle pieces
+    Piece([["x", "x"], ["x"]]),
+
+    Piece([["x"], ["x", "x"]]),
+
+    Piece([[" ", "x"], ["x", "x"]]),
+
+    Piece([["x", "x"], [" ", "x"]]),
+
+    # s things
+    Piece([["x", "x"], [" ", "x", "x"]]),
+
+    Piece([[" ", "x", "x"], ["x", "x"]]),
+
+    Piece([[" ", "x"], ["x", "x"], ["x", " "]]),
+
+    Piece([["x", " "], ["x", "x"], [" ", "x"]]),
+
+    # middle things
+    Piece([["x"], ["x", "x"], ["x"]]),
+
+    Piece([[" ", "x"], ["x", "x"], [" ", "x"]]),
+
+    Piece([[" ", "x", " "], ["x", "x", "x"]]),
+
+    Piece([["x", "x", "x"], [" ", "x", " "]]),
+
+    # all the L's
+    Piece([["x", "x", "x"], ["x"], ["x"]]),
+
+    Piece([["x", "x", "x"], [" ", " ", "x"], [" ", " ", "x"]]),
+
+    Piece([[" ", " ", "x"], [" ", " ", "x"], ["x", "x", "x"]]),
+
+    Piece([["x"], ["x"], ["x", "x", "x"]])
+]
 
 
 class Node():
@@ -183,7 +248,7 @@ class Node():
         self.visits = visits
         self.is_player = is_player
 
-        #if player, the block to place
+        # if player, the block to place
         self.block = block
 
         # if not player, the 3 random blocks
@@ -191,7 +256,7 @@ class Node():
         self.blocks = blocks
         self.seed = seed
 
-        #if player, where to place block
+        # if player, where to place block
         self.position = position
 
         self.expanded = False
